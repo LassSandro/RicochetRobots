@@ -3,8 +3,10 @@
 #include <vector>
 #include <string>
 
-#define SIZER 7
-#define SIZEC 7
+#define SIZER 6
+#define SIZEC 5
+
+#define ROBOTS 1
 
 // Input grid
 /* Each 1 is a wall tile
@@ -22,13 +24,12 @@
   / . . .
 */
 int grid[SIZER][SIZEC] = {
-  {0, 1, 1, 1, 0, 0, 0},
-  {0, 0, 1, 0, 0, 0, 0},
-  {1, 0, 1, 0, 1, 1, 0},
-  {0, 0, 1, 0, 0, 1, 0},
-  {0, 1, 1, 1, 0, 1, 0},
-  {0, 0, 1, 0, 0, 1, 0},
-  {1, 0, 0, 0, 1, 0, 0},
+  {0, 0, 0, 0, 0},
+  {1, 1, 0, 1, 0},
+  {0, 0, 0, 0, 0},
+  {0, 1, 1, 1, 1},
+  {0, 0, 0, 0, 0},
+  {0, 0, 1, 0, 0}
 };
 
 // Struct for a position in the grid
@@ -50,6 +51,8 @@ pos staring;
 // Winning position in the grid
 pos ending;
 
+pos robots[ROBOTS];
+
 // Final min moves result of the algorithm
 int min = 9999999;
 
@@ -60,12 +63,17 @@ std::vector<std::string> allMovesDir;
 /* PRINTS */
 // Print the grid matrix
 void printMatrix(int grid[][SIZEC]) {
+    int robots = 1;
     for (int i = 0; i < SIZER; ++i) {
         for (int j = 0; j < SIZEC; ++j) {
             if (grid[i][j] == 0)
                 std::cout << std::setw(2) << ".";
-            else if (grid[i][j] ==-1)
+            else if (grid[i][j] == -1)
                 std::cout << std::setw(2) << "x";
+            else if (grid[i][j] == 2) {
+                std::cout << std::setw(2) << robots;
+                ++robots;
+            }
             else
                 std::cout << std::setw(2) << "-";
         }
@@ -99,7 +107,7 @@ void copyVector(const std::vector<gridPos>& toCopy, std::vector<gridPos>& copied
 // Check position: column + 1
 void toRight(pos& newPos, const gridPos& gp) {
     while (newPos.c + 1 < SIZEC &&
-           gp.grid[newPos.r][newPos.c + 1] != 1) {
+           (gp.grid[newPos.r][newPos.c + 1] == 0 || gp.grid[newPos.r][newPos.c + 1] == -1)) {
         ++newPos.c;
     }
 }
@@ -107,7 +115,7 @@ void toRight(pos& newPos, const gridPos& gp) {
 // Check position: column - 1
 void toLeft(pos& newPos, const gridPos& gp) {
     while (newPos.c - 1 >= 0 &&
-           gp.grid[newPos.r][newPos.c - 1] != 1) {
+           (gp.grid[newPos.r][newPos.c - 1] == 0 || gp.grid[newPos.r][newPos.c - 1] == -1)) {
         --newPos.c;
     }
 }
@@ -115,7 +123,7 @@ void toLeft(pos& newPos, const gridPos& gp) {
 // Check position: row + 1
 void toBottom(pos& newPos, const gridPos& gp) {
     while (newPos.r + 1 < SIZER &&
-           gp.grid[newPos.r + 1][newPos.c] != 1) {
+           (gp.grid[newPos.r + 1][newPos.c] == 0 || gp.grid[newPos.r + 1][newPos.c] == -1)) {
         ++newPos.r;
     }
 }
@@ -123,7 +131,7 @@ void toBottom(pos& newPos, const gridPos& gp) {
 // Check position: row - 1
 void toTop(pos& newPos, const gridPos& gp) {
     while (newPos.r - 1 >= 0 &&
-           gp.grid[newPos.r - 1][newPos.c] != 1) {
+           (gp.grid[newPos.r - 1][newPos.c] == 0 || gp.grid[newPos.r - 1][newPos.c] == -1)) {
         --newPos.r;
     }
 }
@@ -237,6 +245,9 @@ gridPos goDir(gridPos gp, int layer, int dir, std::vector<gridPos>& moves, std::
         // If you used the least possible moves found save as new best min
         updateMin(layer, dir, gp, moves, dirs);
 
+        printPos(gp.position);
+        printMatrix(gp.grid);
+
         return nullReturn;
     }
 
@@ -248,162 +259,65 @@ gridPos goDir(gridPos gp, int layer, int dir, std::vector<gridPos>& moves, std::
     return gp;
 }
 
-/*gridPos goRight(gridPos gp, int layer) {
+gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir) {
+    // Create 'NULL' pos to return when end reached (base case)
     gridPos nullReturn;
     nullReturn.position.r = -1;
 
-    pos newPos = gp.position;
-
-    while (newPos.c + 1 < SIZE &&
-           gp.grid[newPos.r][newPos.c + 1] != 1) {
-        ++newPos.c;
-    }
-
-    if (newPos.c == gp.position.c ||
-        gp.grid[newPos.r][newPos.c] == -1) {
+    // If the moves exceed the current min, return directly
+    if (layer > min) {
         return nullReturn;
     }
 
-    if (newPos.r == ending.r && newPos.c == ending.c) {
-        if (layer < min) {
-            min = layer;
-            std::cout << "!!! GOT MIN !!!" << std::endl;
-            std::cout << "Layer: " << layer << std::endl;
-            printMatrix(gp.grid);
-            printPos(gp.position);
-            std::cout << std::endl;
-            return nullReturn;
-        }
+    // Create and assign value to temp pos newPos based on the direction in which to go
+    pos newPos;
+    toDir(newPos, dir, gpRobot);
+
+
+    // Exit without success
+    /* IF
+     * Still in the same tile as before you moved (no moves allowed)
+     * Get to an already visited tile
+    */
+    if (samePos(newPos, gpRobot.position) ||
+         gpRobot.grid[newPos.r][newPos.c] == -1) {
+        return nullReturn;
     }
 
-    gp.grid[newPos.r][newPos.c] = -1;
-    gp.position = newPos;
+    // Update robot's position in the player gird
+    gp.grid[gpRobot.position.r][gpRobot.position.c] = 0;
+    gp.grid[newPos.r][newPos.c] = 2;
 
-    //printMatrix(gp.grid);
-    //printPos(newPos);
+    // Update current position and push back moves and dirs
+    updatePos(gpRobot, newPos);
 
-    return gp;
+    //saveMove(gp, dir, moves, dirs);
+
+
+    return gpRobot;
 }
-
-gridPos goLeft(gridPos gp, int layer) {
-    gridPos nullReturn;
-    nullReturn.position.r = -1;
-
-    pos newPos = gp.position;
-
-    while (newPos.c - 1 >= 0 &&
-           gp.grid[newPos.r][newPos.c - 1] != 1) {
-        --newPos.c;
-    }
-
-    if (newPos.c == gp.position.c ||
-        gp.grid[newPos.r][newPos.c] == -1) {
-        return nullReturn;
-    }
-
-    if (newPos.r == ending.r && newPos.c == ending.c) {
-        if (layer < min) {
-            min = layer;
-            std::cout << "!!! GOT MIN !!!" << std::endl;
-            std::cout << "Layer: " << layer << std::endl;
-            printMatrix(gp.grid);
-            printPos(gp.position);
-            std::cout << std::endl;
-            return nullReturn;
-        }
-    }
-
-    gp.grid[newPos.r][newPos.c] = -1;
-    gp.position = newPos;
-
-    //printMatrix(gp.grid);
-    //printPos(newPos);
-
-    return gp;
-}
-
-gridPos goTop(gridPos gp, int layer) {
-    gridPos nullReturn;
-    nullReturn.position.r = -1;
-
-    pos newPos = gp.position;
-
-    while (newPos.r - 1 >= 0 &&
-           gp.grid[newPos.r - 1][newPos.c] != 1) {
-        --newPos.r;
-    }
-
-    if (newPos.r == gp.position.r ||
-        gp.grid[newPos.r][newPos.c] == -1) {
-        return nullReturn;
-    }
-
-    if (newPos.r == ending.r && newPos.c == ending.c) {
-        if (layer < min) {
-            min = layer;
-            std::cout << "!!! GOT MIN !!!" << std::endl;
-            std::cout << "Layer: " << layer << std::endl;
-            printMatrix(gp.grid);
-            printPos(gp.position);
-            std::cout << std::endl;
-            return nullReturn;
-        }
-    }
-
-    gp.grid[newPos.r][newPos.c] = -1;
-    gp.position = newPos;
-
-    //printMatrix(gp.grid);
-    //printPos(newPos);
-
-    return gp;
-}
-
-gridPos goBottom(gridPos gp, int layer) {
-    gridPos nullReturn;
-    nullReturn.position.r = -1;
-
-    pos newPos = gp.position;
-
-    while (newPos.r + 1 < SIZE &&
-           gp.grid[newPos.r + 1][newPos.c] != 1) {
-        ++newPos.r;
-    }
-
-    if (newPos.r == gp.position.r ||
-        gp.grid[newPos.r][newPos.c] == -1) {
-        return nullReturn;
-    }
-
-    if (newPos.r == ending.r && newPos.c == ending.c) {
-        if (layer < min) {
-            min = layer;
-            std::cout << "!!! GOT MIN !!!" << std::endl;
-            std::cout << "Layer: " << layer << std::endl;
-            printMatrix(gp.grid);
-            printPos(gp.position);
-            std::cout << std::endl;
-            return nullReturn;
-        }
-    }
-
-    gp.grid[newPos.r][newPos.c] = -1;
-    gp.position = newPos;
-
-    //printMatrix(gp.grid);
-    //printPos(newPos);
-
-    return gp;
-}*/
 
 void findMin(gridPos gp, int layer, std::vector<gridPos> moves, std::vector<std::string> dirs) {
-    gridPos right = goDir(gp, layer + 1, 1, moves, dirs);
+    // Visit all the four directions (1, 2, 3, 4)
+    for (int d = 1; d <= 4; ++d) {
+        gridPos direction = goDir(gp, layer + 1, d, moves, dirs);
+        if (direction.position.r != -1) {
+            std::cout << "Player find n: " << d << " - " << (layer + 1) << std::endl;
+            printPos(direction.position);
+            printMatrix(direction.grid);
+
+            findMin(direction, layer + 1, moves, dirs);
+            moves.pop_back();
+            dirs.pop_back();
+        }
+    }
+
+    /*gridPos right = goDir(gp, layer + 1, 1, moves, dirs);
     if (right.position.r != -1) {
         findMin(right, layer + 1, moves, dirs);
         moves.pop_back();
         dirs.pop_back();
     }
-
 
     gridPos bottom = goDir(gp, layer + 1, 2, moves, dirs);
     if (bottom.position.r != -1) {
@@ -424,7 +338,41 @@ void findMin(gridPos gp, int layer, std::vector<gridPos> moves, std::vector<std:
         findMin(top, layer + 1, moves, dirs);
         moves.pop_back();
         dirs.pop_back();
+    }*/
+}
+
+void changeRobotPosition(gridPos gp, gridPos gpRobot, int layer, std::vector<gridPos> moves, std::vector<std::string> dirs) {
+    for (int d = 1; d <= 4; ++d) {
+        gridPos temp = gp;
+
+        std::cout << "Robot go n: " << d << std::endl;
+        gridPos direction = goDirRobot(gpRobot, temp, layer + 1, d);
+        if (direction.position.r != -1) {
+            std::cout << "Robot find n: " << d << " - " << (layer + 1) << std::endl;
+            printPos(direction.position);
+            printMatrix(direction.grid);
+
+            // A (On)
+            findMin(temp, layer + 1, moves, dirs);
+
+            // Next recursive robot position
+            changeRobotPosition(temp, direction, layer + 1, moves, dirs);
+        }
     }
+}
+
+void allFindMin(gridPos gp, int layer, std::vector<gridPos> moves, std::vector<std::string> dirs) {
+    // A (On)
+    findMin(gp, layer, moves, dirs);
+
+    gridPos newGp = gp;
+    newGp.position = robots[0];
+    newGp.grid[newGp.position.r][newGp.position.c] = -1;
+    newGp.grid[gp.position.r][gp.position.c] = 2;
+
+
+    // B
+    changeRobotPosition(gp, newGp, layer, moves, dirs);
 }
 
 int main() {
@@ -434,8 +382,12 @@ int main() {
     grid[staring.r][staring.c] = -1;
 
     // Set grid end position
-    ending.r = 6;
-    ending.c = 5;
+    ending.r = 4;
+    ending.c = 3;
+
+    // Set robots positions
+    robots[0].r = 0;
+    robots[0].c = 1;
 
     // Initialize grid to pass to the function
     gridPos setup;
@@ -443,6 +395,11 @@ int main() {
         for (int j = 0; j < SIZEC; ++j) {
             setup.grid[i][j] = grid[i][j];
         }
+    }
+
+    // Initialize robots positions (= 2)
+    for (int rb = 0; rb < ROBOTS; ++rb) {
+        setup.grid[robots[rb].r][robots[rb].c] = 2;
     }
 
     // Initialize starting position and layer = 0
@@ -454,7 +411,8 @@ int main() {
     std::vector<std::string> dirs;
 
     // Find solution
-    findMin(setup, layer, moves, dirs);
+    //findMin(setup, layer, moves, dirs);
+    allFindMin(setup, layer, moves, dirs);
 
     // Print solution
     std::cout << "Min is: " << min << std::endl;
