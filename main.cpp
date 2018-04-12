@@ -426,3 +426,723 @@ int main() {
 
     return 0;
 }
+
+/*
+Robot go n: 1
+Robot find n: 1 - 1
+Pos: (0, 4)
+ 1 x . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . . - . .
+Player find n: 1 - 2
+Pos: (0, 3)
+ x . . x 1
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot find n: 2 - 2
+Pos: (2, 4)
+ 1 x . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ . . - . .
+Player find n: 1 - 3
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . 1
+ . - - - -
+ . . . . .
+ . . - . .
+Player find n: 2 - 4
+Pos: (1, 4)
+ x . . . x
+ - - . - x
+ . . . . 1
+ . - - - -
+ . . . . .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot find n: 3 - 3
+Pos: (2, 0)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ . . - . .
+Player find n: 1 - 4
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ 1 . . . .
+ . - - - -
+ . . . . .
+ . . - . .
+Player find n: 2 - 5
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ 1 . . . x
+ . - - - -
+ . . . . .
+ . . - . .
+Player find n: 3 - 6
+Pos: (2, 1)
+ x . . . x
+ - - . - .
+ 1 x . . x
+ . - - - -
+ . . . . .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot find n: 2 - 4
+Pos: (5, 0)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ x . - . .
+Player find n: 1 - 5
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ 1 . - . .
+Player find n: 2 - 6
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ 1 . - . .
+Player find n: 3 - 7
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ 1 . - . .
+Player find n: 2 - 8
+Pos: (4, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . .
+ 1 . - . .
+Player find n: 1 - 9
+Pos: (4, 4)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . x
+ 1 . - . .
+Player find n: 2 - 10
+Pos: (5, 4)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . x
+ 1 . - . x
+Player find n: 3 - 11
+Pos: (5, 3)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . x
+ 1 . - x x
+FOUND MIN: 12
+
+Pos: (4, 3)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . x x
+ 1 . - x x
+Robot go n: 1
+Robot find n: 1 - 5
+Pos: (5, 1)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ x x - . .
+Player find n: 1 - 6
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . 1 - . .
+Player find n: 2 - 7
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ . 1 - . .
+Player find n: 3 - 8
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ . 1 - . .
+Player find n: 2 - 9
+Pos: (5, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ x 1 - . .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot find n: 4 - 6
+Pos: (4, 1)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . x . . .
+ x x - . .
+Player find n: 1 - 7
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . 1 . . .
+ . . - . .
+Player find n: 2 - 8
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . 1 . . .
+ . . - . .
+Player find n: 3 - 9
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . 1 . . .
+ . . - . .
+Player find n: 2 - 10
+Pos: (5, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . 1 . . .
+ x . - . .
+Player find n: 1 - 11
+Pos: (5, 1)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . 1 . . .
+ x x - . .
+Robot go n: 1
+Robot find n: 1 - 7
+Pos: (4, 4)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . x . . x
+ x x - . .
+Player find n: 1 - 8
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . 1
+ . . - . .
+Player find n: 2 - 9
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . 1
+ . . - . .
+Player find n: 3 - 10
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . 1
+ . . - . .
+Player find n: 2 - 11
+Pos: (5, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . 1
+ x . - . .
+Player find n: 1 - 12
+Pos: (5, 1)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . 1
+ x x - . .
+Robot go n: 1
+Robot go n: 2
+Robot find n: 2 - 8
+Pos: (5, 4)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . x . . x
+ x x - . x
+Player find n: 1 - 9
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . . - . 1
+Player find n: 2 - 10
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ . . - . 1
+Player find n: 3 - 11
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ . . - . 1
+Player find n: 2 - 12
+Pos: (5, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ x . - . 1
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot find n: 3 - 9
+Pos: (5, 3)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . x . . x
+ x x - x x
+Player find n: 1 - 10
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . . - 1 .
+Player find n: 2 - 11
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ . . - 1 .
+Player find n: 3 - 12
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ . . - 1 .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot find n: 4 - 10
+Pos: (4, 3)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . x . x x
+ x x - x x
+Player find n: 1 - 11
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . 1 .
+ . . - . .
+Player find n: 2 - 12
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . 1 .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot find n: 3 - 11
+Pos: (4, 0)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . x x
+ x x - x x
+Player find n: 1 - 12
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ 1 . . . .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot go n: 4
+Robot go n: 4
+Robot go n: 3
+Robot find n: 3 - 8
+Pos: (4, 0)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . . x
+ x x - . .
+Player find n: 1 - 9
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ 1 . . . .
+ . . - . .
+Player find n: 2 - 10
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ 1 . . . .
+ . . - . .
+Player find n: 3 - 11
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ 1 . . . .
+ . . - . .
+Player find n: 2 - 12
+Pos: (3, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ x - - - -
+ 1 . . . .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot go n: 4
+Robot go n: 2
+Robot go n: 3
+Robot find n: 3 - 7
+Pos: (4, 0)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . . .
+ x x - . .
+Player find n: 1 - 8
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ 1 . . . .
+ . . - . .
+Player find n: 2 - 9
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ 1 . . . .
+ . . - . .
+Player find n: 3 - 10
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ 1 . . . .
+ . . - . .
+Player find n: 2 - 11
+Pos: (3, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ x - - - -
+ 1 . . . .
+ . . - . .
+Robot go n: 1
+Robot find n: 1 - 8
+Pos: (4, 4)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . . x
+ x x - . .
+Player find n: 1 - 9
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . 1
+ . . - . .
+Player find n: 2 - 10
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . 1
+ . . - . .
+Player find n: 3 - 11
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . 1
+ . . - . .
+Player find n: 2 - 12
+Pos: (5, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . 1
+ x . - . .
+Robot go n: 1
+Robot go n: 2
+Robot find n: 2 - 9
+Pos: (5, 4)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . . x
+ x x - . x
+Player find n: 1 - 10
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . . - . 1
+Player find n: 2 - 11
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ . . - . 1
+Player find n: 3 - 12
+Pos: (2, 0)
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ . . - . 1
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot find n: 3 - 10
+Pos: (5, 3)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . . x
+ x x - x x
+Player find n: 1 - 11
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ . . - 1 .
+Player find n: 2 - 12
+Pos: (2, 4)
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ . . - 1 .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot find n: 4 - 11
+Pos: (4, 3)
+ 1 x . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x x . x x
+ x x - x x
+Player find n: 1 - 12
+Pos: (0, 4)
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . 1 .
+ . . - . .
+Robot go n: 1
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot go n: 4
+Robot go n: 3
+Robot go n: 4
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot go n: 4
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Robot go n: 3
+Robot go n: 4
+Robot go n: 4
+Robot go n: 3
+Robot go n: 4
+Robot go n: 2
+Robot go n: 3
+Robot go n: 4
+Min is: 12
+RIGHT BOTTOM LEFT BOTTOM RIGHT BOTTOM LEFT TOP
+ x . . . x
+ - - . - .
+ . . . . .
+ . - - - -
+ . . . . .
+ 1 . - . .
+
+ x . . . x
+ - - . - .
+ . . . . x
+ . - - - -
+ . . . . .
+ 1 . - . .
+
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ . . . . .
+ 1 . - . .
+
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . .
+ 1 . - . .
+
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . x
+ 1 . - . .
+
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . x
+ 1 . - . x
+
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . . x
+ 1 . - x x
+
+ x . . . x
+ - - . - .
+ x . . . x
+ . - - - -
+ x . . x x
+ 1 . - x x
+
+Press <RETURN> to close this window...
+
+*/
