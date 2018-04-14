@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-#define SIZER 6
+#define SIZER 5
 #define SIZEC 5
 
 #define ROBOTS 1
@@ -24,12 +24,15 @@
   / . . .
 */
 int grid[SIZER][SIZEC] = {
+  /*{0, 0, 1, 1},
+  {1, 0, 1, 1},
+  {1, 0, 0, 0},
+  {1, 0, 0, 0}*/
+  {0, 0, 1, 0, 0},
+  {1, 0, 1, 0, 1},
   {0, 0, 0, 0, 0},
-  {1, 1, 0, 1, 0},
-  {0, 0, 0, 0, 0},
-  {0, 1, 1, 1, 1},
-  {0, 0, 0, 0, 0},
-  {0, 0, 1, 0, 0}
+  {0, 0, 1, 0, 0},
+  {1, 0, 1, 1, 0}
 };
 
 // Struct for a position in the grid
@@ -45,6 +48,16 @@ struct gridPos {
     pos position;
 };
 
+struct moving {
+    std::vector<gridPos> moves;
+    std::vector<std::string> dir;
+};
+
+struct dirMove {
+    std::string direction;
+    int who;
+};
+
 // Player staring position in the grid
 pos staring;
 
@@ -53,18 +66,35 @@ pos ending;
 
 pos robots[ROBOTS];
 
+moving robotMoved[ROBOTS];
+
 // Final min moves result of the algorithm
 int min = 9999999;
 
 // Final moves: grids and directions
-std::vector<gridPos> allMoves;
-std::vector<std::string> allMovesDir;
+moving allMoved;
+
+//std::vector<gridPos> allMoves;
+//std::vector<std::string> allMovesDir;
+
+
+void findMin(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved, bool singleMove);
+void changeRobotPosition(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved);
+
 
 /* PRINTS */
+void printLayer(int layer) {
+    for (int l = 0; l < layer; ++l) {
+        std::cout << "  ";
+    }
+}
+
 // Print the grid matrix
-void printMatrix(int grid[][SIZEC]) {
+void printMatrix(int grid[][SIZEC], int layer) {
     int robots = 1;
     for (int i = 0; i < SIZER; ++i) {
+        printLayer(layer);
+
         for (int j = 0; j < SIZEC; ++j) {
             if (grid[i][j] == 0)
                 std::cout << std::setw(2) << ".";
@@ -95,7 +125,7 @@ void printDirs(const std::vector<std::string>& dirs) {
     std::cout << std::endl;
 }
 
-
+/* SIDE FUNCTIONS */
 // copied = toCopy values
 void copyVector(const std::vector<gridPos>& toCopy, std::vector<gridPos>& copied) {
     for (size_t i = 0; i < toCopy.size(); ++i) {
@@ -103,11 +133,32 @@ void copyVector(const std::vector<gridPos>& toCopy, std::vector<gridPos>& copied
     }
 }
 
+void copyMatrix(const int toCopy[][SIZEC], int copied[][SIZEC]) {
+    for (int r = 0; r < SIZER; ++r) {
+        for (int c = 0; c < SIZEC; ++c) {
+            copied[r][c] = toCopy[r][c];
+        }
+    }
+}
 
+bool samePos(const pos& pos1, const pos& pos2) {
+    if (pos1.r == pos2.r && pos1.c == pos2.c) {
+        return true;
+    }
+
+    return false;
+}
+
+/* CHECK POSITIONS
+ * do not go outside the grid
+ * do not collide with a wall or another robot or player
+ * stop if you step on another already visited cell (not the starting one) because there is a faster way to reach the same position
+*/
 // Check position: column + 1
 void toRight(pos& newPos, const gridPos& gp) {
     while (newPos.c + 1 < SIZEC &&
-           (gp.grid[newPos.r][newPos.c + 1] == 0 || gp.grid[newPos.r][newPos.c + 1] == -1)) {
+           (gp.grid[newPos.r][newPos.c + 1] == 0 || gp.grid[newPos.r][newPos.c + 1] == -1) &&
+           (gp.grid[newPos.r][newPos.c] != -1 || samePos(newPos, gp.position))) {
         ++newPos.c;
     }
 }
@@ -115,7 +166,8 @@ void toRight(pos& newPos, const gridPos& gp) {
 // Check position: column - 1
 void toLeft(pos& newPos, const gridPos& gp) {
     while (newPos.c - 1 >= 0 &&
-           (gp.grid[newPos.r][newPos.c - 1] == 0 || gp.grid[newPos.r][newPos.c - 1] == -1)) {
+           (gp.grid[newPos.r][newPos.c - 1] == 0 || gp.grid[newPos.r][newPos.c - 1] == -1) &&
+           (gp.grid[newPos.r][newPos.c] != -1 || samePos(newPos, gp.position))) {
         --newPos.c;
     }
 }
@@ -123,7 +175,8 @@ void toLeft(pos& newPos, const gridPos& gp) {
 // Check position: row + 1
 void toBottom(pos& newPos, const gridPos& gp) {
     while (newPos.r + 1 < SIZER &&
-           (gp.grid[newPos.r + 1][newPos.c] == 0 || gp.grid[newPos.r + 1][newPos.c] == -1)) {
+           (gp.grid[newPos.r + 1][newPos.c] == 0 || gp.grid[newPos.r + 1][newPos.c] == -1) &&
+           (gp.grid[newPos.r][newPos.c] != -1 || samePos(newPos, gp.position))) {
         ++newPos.r;
     }
 }
@@ -131,7 +184,8 @@ void toBottom(pos& newPos, const gridPos& gp) {
 // Check position: row - 1
 void toTop(pos& newPos, const gridPos& gp) {
     while (newPos.r - 1 >= 0 &&
-           (gp.grid[newPos.r - 1][newPos.c] == 0 || gp.grid[newPos.r - 1][newPos.c] == -1)) {
+           (gp.grid[newPos.r - 1][newPos.c] == 0 || gp.grid[newPos.r - 1][newPos.c] == -1) &&
+           (gp.grid[newPos.r][newPos.c] != -1 || samePos(newPos, gp.position))) {
         --newPos.r;
     }
 }
@@ -155,75 +209,78 @@ void toDir(pos& newPos, int dir, const gridPos& gp) {
     }
 }
 
-void saveMove(const gridPos& gp, int dir, std::vector<gridPos>& moves, std::vector<std::string>& dirs) {
-    moves.push_back(gp);
+void saveMove(const gridPos& gp, int dir, moving& moved) {
+    moved.moves.push_back(gp);
 
     switch(dir) {
     case 1:
-        dirs.push_back("RIGHT");
+        moved.dir.push_back("RIGHT");
         break;
     case 2:
-        dirs.push_back("BOTTOM");
+        moved.dir.push_back("BOTTOM");
         break;
     case 3:
-        dirs.push_back("LEFT");
+        moved.dir.push_back("LEFT");
         break;
     case 4:
-        dirs.push_back("TOP");
+        moved.dir.push_back("TOP");
         break;
     }
 }
 
-void updateMin(int layer, int dir, const gridPos& gp, std::vector<gridPos>& moves, std::vector<std::string>& dirs) {
-    if (layer < min) {
+void setVisited(gridPos& gp, const pos& newPos) {
+    // Update current tile as already visited
+    gp.grid[newPos.r][newPos.c] = -1;
+}
+
+void updateMin(int layer, int dir, gridPos& gp, moving& moved, moving& robotsMoved) {
+    if (layer <= min) {
         min = layer;
 
-        saveMove(gp, dir, moves, dirs);
+        setVisited(gp, gp.position);
+        saveMove(gp, dir, moved);
 
-        allMoves = moves;
-        allMovesDir = dirs;
+        allMoved = moved;
+        robotMoved[0] = robotsMoved;
 
         // Print result
+        printLayer(layer);
         std::cout << "FOUND MIN: " << layer << std::endl;
         std::cout << std::endl;
     }
 }
 
 void updatePos(gridPos& gp, const pos& newPos) {
-    // Update current tile as already visited
-    gp.grid[newPos.r][newPos.c] = -1;
+    setVisited(gp, newPos);
 
     // Update current position of the player
     gp.position = newPos;
 }
 
-bool samePos(const pos& pos1, const pos& pos2) {
-    if (pos1.r == pos2.r && pos1.c == pos2.c) {
-        return true;
-    }
 
-    return false;
-}
+
+
 
 // Main function, check possible moves in four directions
 // 1: Right
 // 2: Bottom
 // 3: Left
 // 4: Top
-gridPos goDir(gridPos gp, int layer, int dir, std::vector<gridPos>& moves, std::vector<std::string>& dirs) {
+gridPos goDir(gridPos gp, gridPos& gpRobot, int layer, int dir, moving& moved, moving robotsMoved) {
     // Create 'NULL' pos to return when end reached (base case)
     gridPos nullReturn;
     nullReturn.position.r = -1;
 
     // If the moves exceed the current min, return directly
     if (layer > min) {
+        printLayer(layer);
+        std::cout << "Ply Out of moves" << std::endl;
         return nullReturn;
     }
 
-    // Create and assign value to temp pos newPos based on the direction in which to go
+    // newPos = coordinates where the player is after he moves
     pos newPos;
     toDir(newPos, dir, gp);
-
 
     // Exit without success
     /* IF
@@ -243,31 +300,45 @@ gridPos goDir(gridPos gp, int layer, int dir, std::vector<gridPos>& moves, std::
         updatePos(gp, newPos);
 
         // If you used the least possible moves found save as new best min
-        updateMin(layer, dir, gp, moves, dirs);
+        updateMin(layer, dir, gp, moved, robotsMoved);
 
+        printLayer(layer);
         printPos(gp.position);
-        printMatrix(gp.grid);
+        printMatrix(gp.grid, layer);
+
+        //nullReturn.position.r = -2;
 
         return nullReturn;
     }
 
+    // Update player's position in the robot gird
+    gpRobot.grid[gp.position.r][gp.position.c] = 0;
+    gpRobot.grid[newPos.r][newPos.c] = 2;
+
+
     // Update current position and push back moves and dirs
     updatePos(gp, newPos);
-    saveMove(gp, dir, moves, dirs);
+    saveMove(gp, dir, moved);
 
-
+    // gp with the new position and -1 in that position,
+    // as well as -1 in all the previous visited positions
     return gp;
 }
 
-gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir) {
+gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir, moving& robotsMoved) {
     // Create 'NULL' pos to return when end reached (base case)
     gridPos nullReturn;
     nullReturn.position.r = -1;
 
     // If the moves exceed the current min, return directly
     if (layer > min) {
+        printLayer(layer);
+        std::cout << "Rbt Out of moves" << std::endl;
         return nullReturn;
     }
+
+    //setVisited(gpRobot, gpRobot.position);
+    //saveMove(gpRobot, dir, robotsMoved);
 
     // Create and assign value to temp pos newPos based on the direction in which to go
     pos newPos;
@@ -290,859 +361,177 @@ gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir) {
 
     // Update current position and push back moves and dirs
     updatePos(gpRobot, newPos);
-
-    //saveMove(gp, dir, moves, dirs);
+    saveMove(gpRobot, dir, robotsMoved);
 
 
     return gpRobot;
 }
 
-void findMin(gridPos gp, int layer, std::vector<gridPos> moves, std::vector<std::string> dirs) {
+void findMin(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved, bool singleMove) {
     // Visit all the four directions (1, 2, 3, 4)
     for (int d = 1; d <= 4; ++d) {
-        gridPos direction = goDir(gp, layer + 1, d, moves, dirs);
-        if (direction.position.r != -1) {
-            std::cout << "Player find n: " << d << " - " << (layer + 1) << std::endl;
-            printPos(direction.position);
-            printMatrix(direction.grid);
+        gridPos temp = gpRobot;
+        gridPos direction = goDir(gp, temp, layer + 1, d, moved, robotsMoved);
 
-            findMin(direction, layer + 1, moves, dirs);
-            moves.pop_back();
-            dirs.pop_back();
+        // Found where to go
+        if (direction.position.r != -1) {
+            /* PRINTS */
+            printLayer((layer + 1));
+            std::cout << "Player: d, " << d << " - m, " << (layer + 1) << std::endl;
+            printLayer((layer + 1));
+            printPos(direction.position);
+            printMatrix(direction.grid, (layer + 1));
+
+
+
+            // If is a single move (recursive loop)
+            if(singleMove) {
+                // Matrix with -1 only on the new position of the player
+                gridPos newPlayerGp;
+                copyMatrix(grid, newPlayerGp.grid);
+                newPlayerGp.grid[direction.position.r][direction.position.c] = -1;
+                newPlayerGp.position = direction.position;
+                std::cout << "\n" << std::endl;
+
+
+                // 3) MOVE THE ROBOT ONE STEP EACH TIME
+                changeRobotPosition(newPlayerGp, temp, layer + 1, moved, robotsMoved);
+            }
+
+            // Next move of the player
+            findMin(direction, temp, layer + 1, moved, robotsMoved, singleMove);
+
+            moved.dir.pop_back();
+            moved.moves.pop_back();
         }
     }
-
-    /*gridPos right = goDir(gp, layer + 1, 1, moves, dirs);
-    if (right.position.r != -1) {
-        findMin(right, layer + 1, moves, dirs);
-        moves.pop_back();
-        dirs.pop_back();
-    }
-
-    gridPos bottom = goDir(gp, layer + 1, 2, moves, dirs);
-    if (bottom.position.r != -1) {
-        findMin(bottom, layer + 1, moves, dirs);
-        moves.pop_back();
-        dirs.pop_back();
-    }
-
-    gridPos left = goDir(gp, layer + 1, 3, moves, dirs);
-    if (left.position.r != -1) {
-        findMin(left, layer + 1, moves, dirs);
-        moves.pop_back();
-        dirs.pop_back();
-    }
-
-    gridPos top = goDir(gp, layer + 1, 4, moves, dirs);
-    if (top.position.r != -1) {
-        findMin(top, layer + 1, moves, dirs);
-        moves.pop_back();
-        dirs.pop_back();
-    }*/
 }
 
-void changeRobotPosition(gridPos gp, gridPos gpRobot, int layer, std::vector<gridPos> moves, std::vector<std::string> dirs) {
+void changeRobotPosition(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved) {
     for (int d = 1; d <= 4; ++d) {
+        // Using a temp variable
+        // In the next run of the cycle I need the original gp variable, I use temp to run the recursive
         gridPos temp = gp;
+        gridPos direction = goDirRobot(gpRobot, temp, layer + 1, d, robotsMoved);
 
-        std::cout << "Robot go n: " << d << std::endl;
-        gridPos direction = goDirRobot(gpRobot, temp, layer + 1, d);
+        // Found where to go
         if (direction.position.r != -1) {
-            std::cout << "Robot find n: " << d << " - " << (layer + 1) << std::endl;
+            /* PRINT */
+            printLayer((layer + 1));
+            std::cout << "Robot: d, " << d << " - m, " << (layer + 1) << std::endl;
+            printLayer((layer + 1));
             printPos(direction.position);
-            printMatrix(direction.grid);
+            printMatrix(direction.grid, (layer + 1));
+            printLayer((layer + 1));
+            printPos(temp.position);
+            printMatrix(temp.grid, (layer + 1));
+            std::cout << "\n" << std::endl;
 
-            // A (On)
-            findMin(temp, layer + 1, moves, dirs);
+
+            // 4) SEARCH ALL THE POSSIBLE POSITIONS OF THE PLAYER WITH THE NEW ROBOT POSITION
+            findMin(temp, direction, layer + 1, moved, robotsMoved, false);
+
+            std::cout << "\n" << std::endl;
 
             // Next recursive robot position
-            changeRobotPosition(temp, direction, layer + 1, moves, dirs);
+            changeRobotPosition(temp, direction, layer + 1, moved, robotsMoved);
+
+            robotsMoved.dir.pop_back();
+            robotsMoved.moves.pop_back();
         }
     }
 }
 
-void allFindMin(gridPos gp, int layer, std::vector<gridPos> moves, std::vector<std::string> dirs) {
-    // A (On)
-    findMin(gp, layer, moves, dirs);
+void allFindMin(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved) {
+    printMatrix(gp.grid, 0);
+    printMatrix(gpRobot.grid, 0);
 
-    gridPos newGp = gp;
-    newGp.position = robots[0];
-    newGp.grid[newGp.position.r][newGp.position.c] = -1;
-    newGp.grid[gp.position.r][gp.position.c] = 2;
+    // 1) SEARCH ALL THE POSSIBLE POSITIONS OF THE PLAYER WITHOUT MOVING ANYTHING
+    findMin(gp, gpRobot, layer, moved, robotsMoved, false);
 
-
-    // B
-    changeRobotPosition(gp, newGp, layer, moves, dirs);
+    // 2) MOVE THE PLAYER ONE STEP EACH TIME
+    findMin(gp, gpRobot, layer, moved, robotsMoved, true);
 }
 
 int main() {
+    /* SET INITIAL POSITIONS */
     // Set player starting position
     staring.r = 0;
     staring.c = 0;
-    grid[staring.r][staring.c] = -1;
 
     // Set grid end position
-    ending.r = 4;
-    ending.c = 3;
+    ending.r = 0;
+    ending.c = 4;
 
     // Set robots positions
-    robots[0].r = 0;
+    robots[0].r = 3;
     robots[0].c = 1;
 
+
+
+    /* INITIALIZATIONS */
     // Initialize grid to pass to the function
-    gridPos setup;
-    for (int i = 0; i < SIZER; ++i) {
-        for (int j = 0; j < SIZEC; ++j) {
-            setup.grid[i][j] = grid[i][j];
-        }
-    }
+    gridPos gp;
+    gridPos gpRobots[ROBOTS];
+
+    copyMatrix(grid, gp.grid);
 
     // Initialize robots positions (= 2)
     for (int rb = 0; rb < ROBOTS; ++rb) {
-        setup.grid[robots[rb].r][robots[rb].c] = 2;
+        gp.grid[robots[rb].r][robots[rb].c] = 2;
+
+        // Initialize default grid robot
+        copyMatrix(grid, gpRobots[rb].grid);
+
+        // Set to 2 position of each robot
+        for (int exRb = 0; exRb < ROBOTS; ++exRb) {
+            gpRobots[rb].grid[robots[exRb].r][robots[exRb].c] = 2;
+        }
+
+        // Set to 2 position of the player
+        gpRobots[rb].grid[staring.r][staring.c] = 2;
+
+        // Initialize robot position
+        gpRobots[rb].position = robots[rb];
+
+        // Set default position to visited
+        setVisited(gpRobots[rb], gpRobots[rb].position);
     }
 
     // Initialize starting position and layer = 0
-    setup.position = staring;
+    gp.position = staring;
+    setVisited(gp, gp.position);
     int layer = 0;
 
     // Initialize vector to get moves
-    std::vector<gridPos> moves;
-    std::vector<std::string> dirs;
+    moving moved;
+    moving rbtMoved;
 
-    // Find solution
-    //findMin(setup, layer, moves, dirs);
-    allFindMin(setup, layer, moves, dirs);
 
-    // Print solution
+
+    /* FIND SOLUTION */
+    allFindMin(gp, gpRobots[0], layer, moved, rbtMoved);
+
+
+
+    /* PRINT SOLUTION */
     std::cout << "Min is: " << min << std::endl;
 
-    printDirs(allMovesDir);
+    printDirs(allMoved.dir);
+    printDirs(robotMoved[0].dir);
 
-    for (size_t m = 0; m < allMoves.size(); ++m) {
-        printMatrix(allMoves[m].grid);
+
+    for (size_t m = 0; m < allMoved.moves.size(); ++m) {
+        printMatrix(allMoved.moves[m].grid, 0);
+        std::cout << std::endl;
+    }
+
+    std::cout << std::endl;
+
+    for (size_t m = 0; m < robotMoved[0].moves.size(); ++m) {
+        printMatrix(robotMoved[0].moves[m].grid, 0);
         std::cout << std::endl;
     }
 
     return 0;
 }
-
-/*
-Robot go n: 1
-Robot find n: 1 - 1
-Pos: (0, 4)
- 1 x . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . . - . .
-Player find n: 1 - 2
-Pos: (0, 3)
- x . . x 1
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot find n: 2 - 2
-Pos: (2, 4)
- 1 x . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- . . - . .
-Player find n: 1 - 3
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . 1
- . - - - -
- . . . . .
- . . - . .
-Player find n: 2 - 4
-Pos: (1, 4)
- x . . . x
- - - . - x
- . . . . 1
- . - - - -
- . . . . .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot find n: 3 - 3
-Pos: (2, 0)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- . . - . .
-Player find n: 1 - 4
-Pos: (0, 4)
- x . . . x
- - - . - .
- 1 . . . .
- . - - - -
- . . . . .
- . . - . .
-Player find n: 2 - 5
-Pos: (2, 4)
- x . . . x
- - - . - .
- 1 . . . x
- . - - - -
- . . . . .
- . . - . .
-Player find n: 3 - 6
-Pos: (2, 1)
- x . . . x
- - - . - .
- 1 x . . x
- . - - - -
- . . . . .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot find n: 2 - 4
-Pos: (5, 0)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- x . - . .
-Player find n: 1 - 5
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- 1 . - . .
-Player find n: 2 - 6
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- 1 . - . .
-Player find n: 3 - 7
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- 1 . - . .
-Player find n: 2 - 8
-Pos: (4, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . .
- 1 . - . .
-Player find n: 1 - 9
-Pos: (4, 4)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . x
- 1 . - . .
-Player find n: 2 - 10
-Pos: (5, 4)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . x
- 1 . - . x
-Player find n: 3 - 11
-Pos: (5, 3)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . x
- 1 . - x x
-FOUND MIN: 12
-
-Pos: (4, 3)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . x x
- 1 . - x x
-Robot go n: 1
-Robot find n: 1 - 5
-Pos: (5, 1)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- x x - . .
-Player find n: 1 - 6
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . 1 - . .
-Player find n: 2 - 7
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- . 1 - . .
-Player find n: 3 - 8
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- . 1 - . .
-Player find n: 2 - 9
-Pos: (5, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- x 1 - . .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot find n: 4 - 6
-Pos: (4, 1)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . x . . .
- x x - . .
-Player find n: 1 - 7
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . 1 . . .
- . . - . .
-Player find n: 2 - 8
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . 1 . . .
- . . - . .
-Player find n: 3 - 9
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . 1 . . .
- . . - . .
-Player find n: 2 - 10
-Pos: (5, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . 1 . . .
- x . - . .
-Player find n: 1 - 11
-Pos: (5, 1)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . 1 . . .
- x x - . .
-Robot go n: 1
-Robot find n: 1 - 7
-Pos: (4, 4)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . x . . x
- x x - . .
-Player find n: 1 - 8
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . 1
- . . - . .
-Player find n: 2 - 9
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . 1
- . . - . .
-Player find n: 3 - 10
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . 1
- . . - . .
-Player find n: 2 - 11
-Pos: (5, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . 1
- x . - . .
-Player find n: 1 - 12
-Pos: (5, 1)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . 1
- x x - . .
-Robot go n: 1
-Robot go n: 2
-Robot find n: 2 - 8
-Pos: (5, 4)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . x . . x
- x x - . x
-Player find n: 1 - 9
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . . - . 1
-Player find n: 2 - 10
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- . . - . 1
-Player find n: 3 - 11
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- . . - . 1
-Player find n: 2 - 12
-Pos: (5, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- x . - . 1
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot find n: 3 - 9
-Pos: (5, 3)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . x . . x
- x x - x x
-Player find n: 1 - 10
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . . - 1 .
-Player find n: 2 - 11
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- . . - 1 .
-Player find n: 3 - 12
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- . . - 1 .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot find n: 4 - 10
-Pos: (4, 3)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- . x . x x
- x x - x x
-Player find n: 1 - 11
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . 1 .
- . . - . .
-Player find n: 2 - 12
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . 1 .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot find n: 3 - 11
-Pos: (4, 0)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . x x
- x x - x x
-Player find n: 1 - 12
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- 1 . . . .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot go n: 4
-Robot go n: 4
-Robot go n: 3
-Robot find n: 3 - 8
-Pos: (4, 0)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . . x
- x x - . .
-Player find n: 1 - 9
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- 1 . . . .
- . . - . .
-Player find n: 2 - 10
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- 1 . . . .
- . . - . .
-Player find n: 3 - 11
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- 1 . . . .
- . . - . .
-Player find n: 2 - 12
-Pos: (3, 0)
- x . . . x
- - - . - .
- x . . . x
- x - - - -
- 1 . . . .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot go n: 4
-Robot go n: 2
-Robot go n: 3
-Robot find n: 3 - 7
-Pos: (4, 0)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . . .
- x x - . .
-Player find n: 1 - 8
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- 1 . . . .
- . . - . .
-Player find n: 2 - 9
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- 1 . . . .
- . . - . .
-Player find n: 3 - 10
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- 1 . . . .
- . . - . .
-Player find n: 2 - 11
-Pos: (3, 0)
- x . . . x
- - - . - .
- x . . . x
- x - - - -
- 1 . . . .
- . . - . .
-Robot go n: 1
-Robot find n: 1 - 8
-Pos: (4, 4)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . . x
- x x - . .
-Player find n: 1 - 9
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . 1
- . . - . .
-Player find n: 2 - 10
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . 1
- . . - . .
-Player find n: 3 - 11
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . 1
- . . - . .
-Player find n: 2 - 12
-Pos: (5, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . 1
- x . - . .
-Robot go n: 1
-Robot go n: 2
-Robot find n: 2 - 9
-Pos: (5, 4)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . . x
- x x - . x
-Player find n: 1 - 10
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . . - . 1
-Player find n: 2 - 11
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- . . - . 1
-Player find n: 3 - 12
-Pos: (2, 0)
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- . . - . 1
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot find n: 3 - 10
-Pos: (5, 3)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . . x
- x x - x x
-Player find n: 1 - 11
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- . . - 1 .
-Player find n: 2 - 12
-Pos: (2, 4)
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- . . - 1 .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot find n: 4 - 11
-Pos: (4, 3)
- 1 x . . x
- - - . - .
- x . . . x
- . - - - -
- x x . x x
- x x - x x
-Player find n: 1 - 12
-Pos: (0, 4)
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . 1 .
- . . - . .
-Robot go n: 1
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot go n: 4
-Robot go n: 3
-Robot go n: 4
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot go n: 4
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Robot go n: 3
-Robot go n: 4
-Robot go n: 4
-Robot go n: 3
-Robot go n: 4
-Robot go n: 2
-Robot go n: 3
-Robot go n: 4
-Min is: 12
-RIGHT BOTTOM LEFT BOTTOM RIGHT BOTTOM LEFT TOP
- x . . . x
- - - . - .
- . . . . .
- . - - - -
- . . . . .
- 1 . - . .
-
- x . . . x
- - - . - .
- . . . . x
- . - - - -
- . . . . .
- 1 . - . .
-
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- . . . . .
- 1 . - . .
-
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . .
- 1 . - . .
-
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . x
- 1 . - . .
-
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . x
- 1 . - . x
-
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . . x
- 1 . - x x
-
- x . . . x
- - - . - .
- x . . . x
- . - - - -
- x . . x x
- 1 . - x x
-
-Press <RETURN> to close this window...
-
-*/
