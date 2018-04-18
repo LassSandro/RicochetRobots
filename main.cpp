@@ -2,11 +2,12 @@
 #include <iomanip>
 #include <vector>
 #include <string>
+#include <algorithm>
 
-#define SIZER 5
-#define SIZEC 5
+#define SIZER 4
+#define SIZEC 4
 
-#define ROBOTS 1
+#define ROBOTS 3
 
 // Input grid
 /* Each 1 is a wall tile
@@ -28,11 +29,15 @@ int grid[SIZER][SIZEC] = {
   {1, 0, 1, 1},
   {1, 0, 0, 0},
   {1, 0, 0, 0}*/
-  {0, 0, 1, 0, 0},
+  /*{0, 0, 1, 0, 0},
   {1, 0, 1, 0, 1},
   {0, 0, 0, 0, 0},
   {0, 0, 1, 0, 0},
-  {1, 0, 1, 1, 0}
+  {1, 0, 1, 1, 0}*/
+  {0, 0, 0, 1},
+  {0, 0, 1, 0},
+  {0, 0, 0, 0},
+  {0, 1, 0, 0}
 };
 
 // Struct for a position in the grid
@@ -44,7 +49,11 @@ struct pos {
 
 // Pair grid/position
 struct gridPos {
-    int grid[SIZER][SIZEC];
+    int grid[SIZER][SIZEC];/* = {
+        {0, 0, 0, 0},
+        {1, 0, 1, 0},
+        {1, 1, 0, 0}
+      };*/
     pos position;
 };
 
@@ -54,6 +63,7 @@ struct moving {
 };
 
 struct dirMove {
+    gridPos moves;
     std::string direction;
     int who;
 };
@@ -64,22 +74,18 @@ pos staring;
 // Winning position in the grid
 pos ending;
 
+// Store initial robots position
 pos robots[ROBOTS];
 
-moving robotMoved[ROBOTS];
+// Final moves data
+std::vector<dirMove> minMoves;
 
 // Final min moves result of the algorithm
 int min = 9999999;
 
-// Final moves: grids and directions
-moving allMoved;
 
-//std::vector<gridPos> allMoves;
-//std::vector<std::string> allMovesDir;
-
-
-void findMin(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved, bool singleMove);
-void changeRobotPosition(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved);
+void findMin(gridPos gp, gridPos gpRobot[], int layer, int whichRobot, std::vector<dirMove> storeMoves, bool singleMove, int printLayerSpace);
+void changeRobotPosition(gridPos gp, gridPos gpRobot[], int layer, int whichRobot, std::vector<dirMove> storeMoves, int printLayerSpace);
 
 
 /* PRINTS */
@@ -138,6 +144,12 @@ void copyMatrix(const int toCopy[][SIZEC], int copied[][SIZEC]) {
         for (int c = 0; c < SIZEC; ++c) {
             copied[r][c] = toCopy[r][c];
         }
+    }
+}
+
+void copyGridPosArray(const gridPos toCopy[], gridPos copied[]) {
+    for (int rbt = 0; rbt < ROBOTS; ++rbt) {
+        copied[rbt] = toCopy[rbt];
     }
 }
 
@@ -209,23 +221,28 @@ void toDir(pos& newPos, int dir, const gridPos& gp) {
     }
 }
 
-void saveMove(const gridPos& gp, int dir, moving& moved) {
-    moved.moves.push_back(gp);
+void saveMove(const gridPos& gp, int dir, std::vector<dirMove>& storeMoves, int nowIndex) {
+    dirMove toStore;
+
+    toStore.moves = gp;
+    toStore.who = nowIndex;
 
     switch(dir) {
     case 1:
-        moved.dir.push_back("RIGHT");
+        toStore.direction = "RIGHT";
         break;
     case 2:
-        moved.dir.push_back("BOTTOM");
+        toStore.direction = "BOTTOM";
         break;
     case 3:
-        moved.dir.push_back("LEFT");
+        toStore.direction = "LEFT";
         break;
     case 4:
-        moved.dir.push_back("TOP");
+        toStore.direction = "TOP";
         break;
     }
+
+    storeMoves.push_back(toStore);
 }
 
 void setVisited(gridPos& gp, const pos& newPos) {
@@ -233,15 +250,14 @@ void setVisited(gridPos& gp, const pos& newPos) {
     gp.grid[newPos.r][newPos.c] = -1;
 }
 
-void updateMin(int layer, int dir, gridPos& gp, moving& moved, moving& robotsMoved) {
+void updateMin(int layer, int dir, gridPos& gp, std::vector<dirMove>& storeMoves) {
     if (layer <= min) {
         min = layer;
 
         setVisited(gp, gp.position);
-        saveMove(gp, dir, moved);
+        saveMove(gp, dir, storeMoves, 0);
 
-        allMoved = moved;
-        robotMoved[0] = robotsMoved;
+        minMoves = storeMoves;
 
         // Print result
         printLayer(layer);
@@ -266,7 +282,7 @@ void updatePos(gridPos& gp, const pos& newPos) {
 // 2: Bottom
 // 3: Left
 // 4: Top
-gridPos goDir(gridPos gp, gridPos& gpRobot, int layer, int dir, moving& moved, moving robotsMoved) {
+gridPos goDir(gridPos gp, gridPos& gpRobot, int layer, int dir, std::vector<dirMove>& storeMoves) {
     // Create 'NULL' pos to return when end reached (base case)
     gridPos nullReturn;
     nullReturn.position.r = -1;
@@ -300,7 +316,7 @@ gridPos goDir(gridPos gp, gridPos& gpRobot, int layer, int dir, moving& moved, m
         updatePos(gp, newPos);
 
         // If you used the least possible moves found save as new best min
-        updateMin(layer, dir, gp, moved, robotsMoved);
+        updateMin(layer, dir, gp, storeMoves);
 
         printLayer(layer);
         printPos(gp.position);
@@ -318,14 +334,14 @@ gridPos goDir(gridPos gp, gridPos& gpRobot, int layer, int dir, moving& moved, m
 
     // Update current position and push back moves and dirs
     updatePos(gp, newPos);
-    saveMove(gp, dir, moved);
+    saveMove(gp, dir, storeMoves, 0);
 
     // gp with the new position and -1 in that position,
     // as well as -1 in all the previous visited positions
     return gp;
 }
 
-gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir, moving& robotsMoved) {
+gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir, std::vector<dirMove>& storeMoves) {
     // Create 'NULL' pos to return when end reached (base case)
     gridPos nullReturn;
     nullReturn.position.r = -1;
@@ -336,9 +352,6 @@ gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir, moving& rob
         std::cout << "Rbt Out of moves" << std::endl;
         return nullReturn;
     }
-
-    //setVisited(gpRobot, gpRobot.position);
-    //saveMove(gpRobot, dir, robotsMoved);
 
     // Create and assign value to temp pos newPos based on the direction in which to go
     pos newPos;
@@ -359,177 +372,395 @@ gridPos goDirRobot(gridPos gpRobot, gridPos& gp, int layer, int dir, moving& rob
     gp.grid[gpRobot.position.r][gpRobot.position.c] = 0;
     gp.grid[newPos.r][newPos.c] = 2;
 
+    /*std::cout << "Got here" << std::endl;
+    printPos(newPos);
+    printMatrix(gp.grid, 0);*/
+
     // Update current position and push back moves and dirs
     updatePos(gpRobot, newPos);
-    saveMove(gpRobot, dir, robotsMoved);
+    saveMove(gpRobot, dir, storeMoves, 1);
 
 
     return gpRobot;
 }
 
-void findMin(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved, bool singleMove) {
+gridPos moveDir(std::vector<gridPos>& gpRobot, gridPos& gpPlayer, int layer, int playerIndex, int nowIndex, int dir, std::vector<dirMove>& storeMoves) {
+    // Create 'NULL' pos to return when end reached (base case)
+    gridPos nullReturn;
+    nullReturn.position.r = -1;
+
+    // If the moves exceed the current min, return directly
+    if (layer > min) {
+        //printLayer(layer);
+        //std::cout << "Rbt Out of moves" << std::endl;
+        return nullReturn;
+    }
+
+    // Create and assign value to temp pos newPos based on the direction in which to go to the first robot
+    pos newPos;
+    toDir(newPos, dir, gpRobot[0]);
+
+
+    // Exit without success
+    /* IF
+     * Still in the same tile as before you moved (no moves allowed)
+     * Get to an already visited tile
+    */
+    if (samePos(newPos, gpRobot[0].position) ||
+         gpRobot[0].grid[newPos.r][newPos.c] == -1) {
+        return nullReturn;
+    }
+
+    // Exit with success
+    /* IF
+     * Position reached is the end tile
+    */
+    if (samePos(newPos, ending) && playerIndex == nowIndex) {
+        updatePos(gpRobot[0], newPos);
+
+        // If you used the least possible moves found save as new best min
+        updateMin(layer, dir, gpRobot[0], storeMoves);
+
+        printLayer(layer);
+        printPos(gpRobot[0].position);
+        printMatrix(gpRobot[0].grid, layer);
+
+        nullReturn.position.r = 1;
+        return nullReturn;
+    }
+
+    // Update robot's position in the other robots gird
+    for (size_t others = 1; others < gpRobot.size(); ++others) {
+        gpRobot[others].grid[gpRobot[0].position.r][gpRobot[0].position.c] = 0;
+        gpRobot[others].grid[newPos.r][newPos.c] = 2;
+    }
+
+    if (playerIndex != nowIndex) {
+        gpPlayer.grid[gpRobot[0].position.r][gpRobot[0].position.c] = 0;
+        gpPlayer.grid[newPos.r][newPos.c] = 2;
+    }
+
+
+    // Update current position and push back moves and dirs
+    updatePos(gpRobot[0], newPos);
+    saveMove(gpRobot[0], dir, storeMoves, nowIndex);
+
+    // Success return
+    nullReturn.position.r = 0;
+    return nullReturn;
+}
+
+void findMin(gridPos gp, gridPos gpRobot[], int layer, int whichRobot, std::vector<dirMove> storeMoves, bool singleMove, int printLayerSpace) {
     // Visit all the four directions (1, 2, 3, 4)
     for (int d = 1; d <= 4; ++d) {
-        gridPos temp = gpRobot;
-        gridPos direction = goDir(gp, temp, layer + 1, d, moved, robotsMoved);
+        gridPos tempArray[ROBOTS];
+        copyGridPosArray(gpRobot, tempArray);
+
+        gridPos temp = tempArray[whichRobot];
+        gridPos direction = goDir(gp, temp, layer + 1, d, storeMoves);
 
         // Found where to go
         if (direction.position.r != -1) {
-            /* PRINTS */
-            printLayer((layer + 1));
-            std::cout << "Player: d, " << d << " - m, " << (layer + 1) << std::endl;
-            printLayer((layer + 1));
-            printPos(direction.position);
-            printMatrix(direction.grid, (layer + 1));
-
-
-
             // If is a single move (recursive loop)
+            /*std::cout << "Pause player before singleMove";
+            //std::cin.get();*/
+
             if(singleMove) {
+                /** Print passed grid **/
+                /*std::cout << "Print passed singleMove grid" << std::endl;
+                printPos(gp.position);
+                printMatrix(gp.grid, 0);
+                printPos(gpRobot[0].position);
+                printMatrix(gpRobot[0].grid, 0);
+                printPos(gpRobot[1].position);
+                printMatrix(gpRobot[1].grid, 0);*/
+
+                gridPos newGp;
+                copyMatrix(grid, newGp.grid);
+                newGp.position = gp.position;
+                newGp.grid[gp.position.r][gp.position.c] = 2;
+                // Move the robot with the pervious player position
+                changeRobotPosition(newGp, gpRobot, layer, whichRobot, storeMoves, printLayerSpace + 1);
+
+                std::cout << "NEXT PLAYER GOES" << std::endl;
                 // Matrix with -1 only on the new position of the player
-                gridPos newPlayerGp;
+                /*gridPos newPlayerGp;
                 copyMatrix(grid, newPlayerGp.grid);
                 newPlayerGp.grid[direction.position.r][direction.position.c] = -1;
                 newPlayerGp.position = direction.position;
-                std::cout << "\n" << std::endl;
-
-
-                // 3) MOVE THE ROBOT ONE STEP EACH TIME
-                changeRobotPosition(newPlayerGp, temp, layer + 1, moved, robotsMoved);
+                std::cout << "\n" << std::endl;*/
             }
 
-            // Next move of the player
-            findMin(direction, temp, layer + 1, moved, robotsMoved, singleMove);
+            /* PRINTS */
+            printLayer(printLayerSpace);
+            std::cout << "Player with Robot " << whichRobot << ": d, " << d << " - m, " << (layer + 1) << std::endl;
+            printLayer(printLayerSpace);
+            printPos(direction.position);
+            printMatrix(direction.grid, printLayerSpace);
 
-            moved.dir.pop_back();
-            moved.moves.pop_back();
+            // Next move of the player
+            findMin(direction, tempArray, layer + 1, whichRobot, storeMoves, singleMove, printLayerSpace);
+
+            storeMoves.pop_back();
         }
     }
 }
 
-void changeRobotPosition(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved) {
+void changeRobotPosition(gridPos gp, gridPos gpRobot[], int layer, int whichRobot, std::vector<dirMove> storeMoves, int printLayerSpace) {
     for (int d = 1; d <= 4; ++d) {
         // Using a temp variable
         // In the next run of the cycle I need the original gp variable, I use temp to run the recursive
+        gridPos tempArray[ROBOTS];
+        copyGridPosArray(gpRobot, tempArray);
+
         gridPos temp = gp;
-        gridPos direction = goDirRobot(gpRobot, temp, layer + 1, d, robotsMoved);
+        gridPos direction = goDirRobot(gpRobot[whichRobot], temp, layer + 1, d, storeMoves);
 
         // Found where to go
         if (direction.position.r != -1) {
-            /* PRINT */
-            printLayer((layer + 1));
-            std::cout << "Robot: d, " << d << " - m, " << (layer + 1) << std::endl;
-            printLayer((layer + 1));
-            printPos(direction.position);
-            printMatrix(direction.grid, (layer + 1));
-            printLayer((layer + 1));
-            printPos(temp.position);
-            printMatrix(temp.grid, (layer + 1));
-            std::cout << "\n" << std::endl;
+            // GREAT CHANGING
+            // If there are still robots to move recursively call them
+            if (whichRobot < ROBOTS - 1) {
+                /** Print passed grid **/
+                /*std::cout << "Print passed < which grid" << std::endl;
+                printPos(gp.position);
+                printMatrix(gp.grid, 0);
+                printPos(gpRobot[0].position);
+                printMatrix(gpRobot[0].grid, 0);
+                printPos(gpRobot[1].position);
+                printMatrix(gpRobot[1].grid, 0);*/
 
+                changeRobotPosition(gp, gpRobot, layer, whichRobot + 1, storeMoves, printLayerSpace + 1);
+            }
+
+            /* PRINT */
+            printLayer(printLayerSpace);
+            std::cout << "Robot " << whichRobot << ": d, " << d << " - m, " << (layer + 1) << std::endl;
+            printLayer(printLayerSpace);
+            printPos(direction.position);
+            printMatrix(direction.grid, printLayerSpace);
+
+            printLayer(printLayerSpace);
+            std::cout << "---" << std::endl;
+            printLayer(printLayerSpace);
+            printPos(temp.position);
+            printMatrix(temp.grid, printLayerSpace);
+            std::cout << "\n" << std::endl;
 
             // 4) SEARCH ALL THE POSSIBLE POSITIONS OF THE PLAYER WITH THE NEW ROBOT POSITION
-            findMin(temp, direction, layer + 1, moved, robotsMoved, false);
+            tempArray[whichRobot] = direction;
 
-            std::cout << "\n" << std::endl;
+            /** Print passed grid **/
+            /*std::cout << "Print passed all possible grid" << std::endl;
+            printPos(temp.position);
+            printMatrix(temp.grid, 0);
+            printPos(tempArray[0].position);
+            printMatrix(tempArray[0].grid, 0);
+            printPos(tempArray[1].position);
+            printMatrix(tempArray[1].grid, 0);*/
+
+            findMin(temp, tempArray, layer + 1, whichRobot, storeMoves, false, printLayerSpace + 1);
 
             // Next recursive robot position
-            changeRobotPosition(temp, direction, layer + 1, moved, robotsMoved);
+            changeRobotPosition(temp, tempArray, layer + 1, whichRobot, storeMoves, printLayerSpace);
 
-            robotsMoved.dir.pop_back();
-            robotsMoved.moves.pop_back();
+            storeMoves.pop_back();
         }
     }
 }
 
-void allFindMin(gridPos gp, gridPos gpRobot, int layer, moving moved, moving robotsMoved) {
-    printMatrix(gp.grid, 0);
-    printMatrix(gpRobot.grid, 0);
+void moveRobot(std::vector<gridPos> gpRobot, gridPos gpPlayer, int layer, int playerIndex, int nowIndex, std::vector<dirMove> storeMoves, int printLayerSpace, bool findAll) {
+    // Remove robots until there is only one, then call findAll moves of the player
+    if (!findAll) {
+        if (gpRobot.size() > 1) {
+            std::vector<gridPos> nextCall = gpRobot;
+            nextCall.erase(nextCall.begin());
+            moveRobot(nextCall, gpPlayer, layer, playerIndex, nowIndex + 1, storeMoves, printLayerSpace + 1, findAll);
+        } else {
+            // FIND ALL MOVES LEFT BY MOVING ONLY THE PLAYER
+            /*printLayer(printLayerSpace);
+            std::cout << "ALL MOVES " << gpRobot.size() << std::endl;*/
+            moveRobot(gpRobot, gpPlayer, layer, 0, 0, storeMoves, printLayerSpace + 1, true);
+        }
+    }
+
+    for (int d = 1; d <= 4; ++d) {
+        // Using a temp variable
+        // In the next run of the cycle I need the original gp variable, I use temp to run the recursive
+        std::vector<gridPos> temp;
+        gridPos findMove;
+        gridPos tempPlayer;
+
+        if (!findAll) {
+            temp = gpRobot;
+            tempPlayer = gpPlayer;
+            findMove = moveDir(temp, tempPlayer, layer + 1, playerIndex, nowIndex, d, storeMoves);
+        } else {
+            temp.push_back(gpPlayer);
+            findMove = moveDir(temp, gpPlayer, layer + 1, 0, 0, d, storeMoves);
+        }
+
+        // Found where to go
+        if (findMove.position.r != -1) {
+            /* PRINT */
+            /*printLayer(printLayerSpace);
+            if (playerIndex == nowIndex || findAll) {
+                std::cout << "Player";
+            } else {
+                std::cout << "Robot " << nowIndex;
+            }
+            std::cout << ": d, " << d << " - m, " << (layer + 1) << std::endl;
+
+            for (size_t i = 0; i < temp.size(); ++i) {
+                printLayer(printLayerSpace);
+                printPos(temp[i].position);
+                printMatrix(temp[i].grid, printLayerSpace);
+                std::cout << "\n" << std::endl;
+            }*/
+
+            // Next recursive robot position
+            if (!findAll) {
+                moveRobot(temp, tempPlayer, layer + 1, playerIndex, nowIndex, storeMoves, printLayerSpace, findAll);
+            } else {
+                moveRobot(temp, temp[0], layer + 1, playerIndex, nowIndex, storeMoves, printLayerSpace, findAll);
+            }
+
+            storeMoves.pop_back();
+        }
+    }
+}
+
+void allFindMin(std::vector<gridPos> gpRobot, int layer, std::vector<dirMove> storeMoves) {
+    int permutations[gpRobot.size()];
+    for (size_t num = 0; num < gpRobot.size(); ++num) {
+            permutations[num] = num;
+    }
+
+    std::vector<gridPos> backupSwap = gpRobot;
+    do {
+        int playerIndex = 0;
+        for (size_t swp = 0; swp < gpRobot.size(); ++swp) {
+            gpRobot[swp] = backupSwap[permutations[swp]];
+            if (permutations[swp] == 0) {
+                playerIndex = swp;
+            }
+
+            std::cout << permutations[swp] << " ";
+        }
+
+        std::cout << "-> " << playerIndex << std::endl;
+        printMatrix(gpRobot[playerIndex].grid, 0);
+        if (permutations[gpRobot.size() - 1] != 0) {
+            moveRobot(gpRobot, gpRobot[playerIndex], layer, playerIndex, 0, storeMoves, 0, false);
+        }
+    } while (std::next_permutation(permutations, permutations + gpRobot.size()));
+
+
+    // 1) Single move of the Player, calling the first robot in the array
+    //findMin(gp, gpRobot, layer, 0, storeMoves, true, 0);
 
     // 1) SEARCH ALL THE POSSIBLE POSITIONS OF THE PLAYER WITHOUT MOVING ANYTHING
-    findMin(gp, gpRobot, layer, moved, robotsMoved, false);
+    //findMin(gp, gpRobot, layer, storeMoves, false);
 
     // 2) MOVE THE PLAYER ONE STEP EACH TIME
-    findMin(gp, gpRobot, layer, moved, robotsMoved, true);
+    //findMin(gp, gpRobot, layer, storeMoves, true);
 }
 
 int main() {
     /* SET INITIAL POSITIONS */
     // Set player starting position
-    staring.r = 0;
+    staring.r = 3;
     staring.c = 0;
 
     // Set grid end position
-    ending.r = 0;
-    ending.c = 4;
+    ending.r = 1;
+    ending.c = 3;
 
     // Set robots positions
-    robots[0].r = 3;
-    robots[0].c = 1;
+    robots[0].r = 0;
+    robots[0].c = 2;
+
+    robots[1].r = 2;
+    robots[1].c = 3;
+
+    robots[2].r = 1;
+    robots[2].c = 1;
 
 
 
     /* INITIALIZATIONS */
     // Initialize grid to pass to the function
-    gridPos gp;
-    gridPos gpRobots[ROBOTS];
+    std::vector<gridPos> gpRobot;
+    /*gridPos gp;
+    gridPos gpRobots[ROBOTS + 1];*/
 
-    copyMatrix(grid, gp.grid);
+    //copyMatrix(grid, gp.grid);
 
     // Initialize robots positions (= 2)
-    for (int rb = 0; rb < ROBOTS; ++rb) {
-        gp.grid[robots[rb].r][robots[rb].c] = 2;
+    for (int rb = 0; rb < ROBOTS + 1; ++rb) {
+        //gp.grid[robots[rb].r][robots[rb].c] = 2;
+        gridPos newGpRobot;
 
         // Initialize default grid robot
-        copyMatrix(grid, gpRobots[rb].grid);
+        copyMatrix(grid, newGpRobot.grid);
 
-        // Set to 2 position of each robot
+        // Set to 2 position of each robot and then of the player
         for (int exRb = 0; exRb < ROBOTS; ++exRb) {
-            gpRobots[rb].grid[robots[exRb].r][robots[exRb].c] = 2;
+            newGpRobot.grid[robots[exRb].r][robots[exRb].c] = 2;
         }
 
         // Set to 2 position of the player
-        gpRobots[rb].grid[staring.r][staring.c] = 2;
+        newGpRobot.grid[staring.r][staring.c] = 2;
 
         // Initialize robot position
-        gpRobots[rb].position = robots[rb];
+        if (rb == 0) {
+            newGpRobot.position = staring;
+        } else {
+            newGpRobot.position = robots[rb - 1];
+        }
 
         // Set default position to visited
-        setVisited(gpRobots[rb], gpRobots[rb].position);
+        setVisited(newGpRobot, newGpRobot.position);
+
+        gpRobot.push_back(newGpRobot);
+
+        printPos(newGpRobot.position);
+        printMatrix(newGpRobot.grid, 0);
+        std::cout << std::endl;
     }
 
     // Initialize starting position and layer = 0
-    gp.position = staring;
-    setVisited(gp, gp.position);
+    //gp.position = staring;
+    //setVisited(gp, gp.position);
+    //gpRobots[0] = gp;
+
     int layer = 0;
 
-    // Initialize vector to get moves
-    moving moved;
-    moving rbtMoved;
+    std::vector<dirMove> storeMoves;
 
+    /*printPos(gp.position);
+    printMatrix(gp.grid, 0);*/
 
 
     /* FIND SOLUTION */
-    allFindMin(gp, gpRobots[0], layer, moved, rbtMoved);
+    allFindMin(gpRobot, layer, storeMoves);
 
 
 
     /* PRINT SOLUTION */
-    std::cout << "Min is: " << min << std::endl;
+    std::cout << "Moves min: " << min << std::endl;
 
-    printDirs(allMoved.dir);
-    printDirs(robotMoved[0].dir);
+    for (size_t m = 0; m < minMoves.size(); ++m) {
+        std::cout << (m + 1) << ") ";
+        if (minMoves[m].who == 0)
+            std::cout << "Player";
+        else
+            std::cout << "Robot";
 
+        std::cout << " - " << minMoves[m].direction << std::endl;
 
-    for (size_t m = 0; m < allMoved.moves.size(); ++m) {
-        printMatrix(allMoved.moves[m].grid, 0);
-        std::cout << std::endl;
-    }
-
-    std::cout << std::endl;
-
-    for (size_t m = 0; m < robotMoved[0].moves.size(); ++m) {
-        printMatrix(robotMoved[0].moves[m].grid, 0);
+        printPos(minMoves[m].moves.position);
+        printMatrix(minMoves[m].moves.grid, 0);
         std::cout << std::endl;
     }
 
